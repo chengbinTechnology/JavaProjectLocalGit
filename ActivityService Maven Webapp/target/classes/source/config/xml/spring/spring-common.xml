@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd">
+	<!-- <bean id="helloControl" class="org.chengbin.struts2.SpringAction"></bean> -->
+
+	<bean id="publicBean" class="com.doper.card.common.PublicBean">
+		<property name="resourcePath">
+			<value>/system.properties</value>
+		</property>
+	</bean>
+	
+	<bean id="serviceCommon" class="com.doper.card.common.ServiceCommon"></bean>
+	
+	<bean id="authCodeService" class="com.doper.card.service.system.impl.AuthCodeServiceImpl"></bean>
+
+	<bean id="systemSecurityService" class="com.doper.card.service.system.impl.SystemSecurityServiceImpl"></bean>
+	<!-- 辅助类 -->
+	<bean id="auxiliaryService" class="com.doper.card.service.system.impl.AuxiliaryServiceImpl"></bean>
+	
+	    <!-- 账务记录 -->
+    <bean id="accountBusinessService" class="com.doper.card.service.businessAccount.impl.AccountBusinessServiceImpl"></bean>
+	
+</beans> 

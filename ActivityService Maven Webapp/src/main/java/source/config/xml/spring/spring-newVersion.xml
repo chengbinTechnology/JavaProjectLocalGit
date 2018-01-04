@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd">
+	<!-- <bean id="helloControl" class="org.chengbin.struts2.SpringAction"></bean> -->
+	<bean id="clientUserDao" class="com.doper.card.dao.user.ClientUserDao">
+		<property name="commonDao" ref="commonDao"></property>
+		<property name="veDao" ref="veDao"></property>
+		<property name="jedisTransactionDao" ref="jedisTransactionDao"></property>
+		<property name="jedisDisposableDao" ref="jedisDisposableDao"></property>
+	</bean>
+
+	<bean id="loginUserDao" class="com.doper.card.dao.user.LoginUserDao">
+		<property name="commonDao" ref="commonDao"></property>
+		<property name="veDao" ref="veDao"></property>
+		<property name="jedisTransactionDao" ref="jedisTransactionDao"></property>
+		<property name="jedisDisposableDao" ref="jedisDisposableDao"></property>
+	</bean>
+
+	<bean id="merchantUserDao" class="com.doper.card.dao.merchant.MerchantUserDao">
+		<property name="commonDao" ref="commonDao"></property>
+		<property name="veDao" ref="veDao"></property>
+		<property name="jedisTransactionDao" ref="jedisTransactionDao"></property>
+		<property name="jedisDisposableDao" ref="jedisDisposableDao"></property>
+	</bean>
+	
+	<!--  -->
+	<bean id="merchantBankDao" class="com.doper.card.dao.merchant.MerchantBankDao">
+		<property name="commonDao" ref="commonDao"></property>
+		<property name="veDao" ref="veDao"></property>
+	</bean>
+	
+	
+
+<bean id="userInMerchantDao" class="com.doper.card.dao.merchant.UserInMerchantDao">
+	    <property name="veDao" ref="veDao"></property>
+		<property name="commonDao" ref="commonDao"></property>
+		<property name="jedisTransactionDao" ref="jedisTransactionDao"></property>
+		<property name="jedisDisposableDao" ref="jedisDisposableDao"></property>
+	</bean>
+	
+	
+	<bean id="appOperationDao" class="com.doper.card.dao.app.AppOperationDao">
+	    <property name="veDao" ref="veDao"></property>
+		<property name="commonDao" ref="commonDao"></property>
+	</bean>
+
+
+	<bean id="loginUserService" class="com.doper.card.service.user.impl.LoginUserServiceImpl"></bean>
+	<bean id="clientUserService" class="com.doper.card.service.user.impl.UserClientServiceImpl"></bean>
+
+	<bean id="loginMerchantService"
+		class="com.doper.card.service.merchant.impl.LoginMerchantServiceImpl"></bean>
+
+	<bean id="deviceManagerService" class="com.doper.card.service.device.impl.DeviceManagerServiceImpl"></bean>
+
+
+	<!-- redis的事务控制 -->
+	<!-- 事务管理器 -->
+	<bean id="jedisTxManager" class="org.app.redis.JedisTxManager">
+		<property name="jedisSessionFactory" ref="jedisSessionFactory"></property>
+	</bean>
+
+	<!-- SessionFactory -->
+	<bean id="jedisSessionFactory" class="org.app.redis.JedisSessionFactory">
+		<property name="jedisTxManager" ref="jedisTxManager"></property>
+		<property name="redisDataSource" ref="redisDataSource"></property>
+	</bean>
+
+
+
+	<bean id="jedisTransactionDao" class="org.app.redis.JedisTransactionDao">
+		<property name="jedisSessionFactory" ref="jedisSessionFactory"></property>
+	</bean>
+
+	<bean id="jedisDisposableDao" class="org.app.redis.JedisDisposableDao">
+		<property name="jedisSessionFactory" ref="jedisSessionFactory"></property>
+	</bean>
+	<!-- 事务控制 -->
+	
+	
+	
+	<!-- 订单的金币划转业务 -->
+	<bean id="userConsumeOrderTransGoldService" class="com.doper.card.service.user.impl.UserConsumeOrderTransGoldServiceImpl">
+	</bean>
+	<bean id="userConsumerOrderService" class="com.doper.card.service.user.impl.UserConsumerOrderServiceImpl">
+	</bean>
+	
+	<!-- 订单处理明细定义 -->
+	<bean id="stockDetailProcessService" class="com.doper.card.service.user.detail.impl.UserConsumeStockDetailProcessServiceImpl"></bean>
+	<bean id="treasureDetailProcessService" class="com.doper.card.service.user.detail.impl.UserConsumeTreasureDetailProcessImpl"></bean>
+	<bean id="goldDetailProcessService" class="com.doper.card.service.user.detail.impl.UserConsumeGoldDetailProcessServiceImpl"></bean>
+	
+	
+	<bean id="stockPresentProcessService" class="com.doper.card.service.user.detail.impl.UserConsumeStockPresentDetailProcessServiceImpl"></bean>
+	<bean id="treasurePresentProcessService" class="com.doper.card.service.user.detail.impl.UserConsumeTreasurePresentDetailProcessServiceImpl"></bean>
+	
+	
+	 <!-- Redis通道处理类 -->
+	 <bean id="stockBlockingQueueService" class="com.doper.card.service.system.impl.StockBlockingQueueServiceImpl"></bean>
+	 <bean id="goldBlockingQueueService" class="com.doper.card.service.system.impl.GoldBlockingQueueServiceImpl"></bean>
+	 <bean id="bailBlockingQueueService" class="com.doper.card.service.system.impl.BailBlockingQueueServiceImpl"></bean>
+	 <bean id="moneyBlockingQueueService" class="com.doper.card.service.system.impl.MoneyBlockingQueueServiceImpl"></bean>
+	 
+	 <!-- 银行接口 -->
+	 <bean id="bankXmlBuildFactory" class="com.doper.card.service.socket.factory.DoperCCBBusinessXmlBuildFactory"></bean>
+	 <bean id="socketClientFactory" class="com.doper.card.service.socket.impl.DoperBankSocketClientFactory"></bean>
+	 <bean id="bankSocketHandler" class="com.doper.card.service.socket.handler.BankSocketHandler"></bean>
+	 <bean id="clientHandlerFactory" class="com.doper.card.service.socket.factory.DoperCCBClientHandlerFactory"></bean>
+	<bean id="doperCCBSocketService" class="com.doper.card.service.socket.impl.DoperCCBBusinessServiceImpl"></bean>
+	
+	<bean id="nativeSocketClientFactory" class="com.doper.card.service.socket.factory.DoperNativeSocketClientFactory"></bean>
+	<bean id="nativeSocketUtils" class="com.doper.card.service.socket.NativeSocketUtils"></bean>
+	<bean id="transAccResultProcess" class="com.doper.card.service.socket.handler.DoperCCBBuinessTransAccountResultProcess"></bean>
+	<bean id="paueAccResultProcess" class="com.doper.card.service.socket.handler.DoperCCBBuinessPaueAccountResultProcess"></bean>
+	<bean id="queryAccResultProcess" class="com.doper.card.service.socket.handler.DoperCCBBuinessBlanceQueryAccountResultProcess"></bean>
+</beans>

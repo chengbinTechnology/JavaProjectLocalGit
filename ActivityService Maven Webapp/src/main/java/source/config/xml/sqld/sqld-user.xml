@@ -1,0 +1,1312 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sqls package="doper">
+	<sql id="queryBusiRelation" title="查询本商家的可代充值商家列表">
+		<![CDATA[SELECT
+		t3.id,
+		t3.root_id,
+		t3.busi_name,
+		t3.busi_tel,
+		t3.busi_address
+		FROM
+		D_BUSINESS_INFO t3
+		WHERE
+		t3.ROOT_ID IN (
+		SELECT
+		t1.REQUEST_BUSI_ID
+		FROM
+		D_CUST_AGENT_REACHARGE_RELATION t1
+		WHERE
+		t1.RECEIVE_BUSI_ID = ${busi_id}
+		AND t1.STATE=2
+		)
+		AND #if(!${search_word}) 1=1 #else BUSI_NAME like
+		'%${search_word}%' #end]]>
+	</sql>
+	<!-- 查询用户的总资产 -->
+	<sql id="queryCountUserAsset" title="查询用户的总资产">
+		<![CDATA[SELECT
+	T5.USER_ID,
+	SUM(T5.REALGOLDNUM) AS REALGOLDNUM,
+	SUM(T5.RESTOREGOLDNUM) AS RESTOREGOLDNUM,
+	SUM(CAVIARNUMBER) AS CAVIARNUMBER,
+	SUM(CAVIARENUMBER) AS CAVIARENUMBER,
+	SUM(COUNTGOLDNUM) AS COUNTGOLDNUM,
+	SUM(GOLDCOSTNUM) AS GOLDCOSTNUM
+FROM
+	(
+		SELECT
+			T3.*, T4.BUSI_NAME
+		FROM
+			(
+				SELECT
+					T1.BUSI_ID,
+					T1.USER_ID,
+					T1.REAL_GOLD_NUMBER AS REALGOLDNUM,
+					T1.RESTORE_GOLD_NUMBER AS RESTOREGOLDNUM,
+					T1.CAVIAR_NUMBER AS CAVIARNUMBER,
+					T1.CAVIARE_NUMBER AS CAVIARENUMBER,
+					T2.CONTENT AS GOLDRATIO,
+					(
+						T1.REAL_GOLD_NUMBER + T1.RESTORE_GOLD_NUMBER
+					) AS COUNTGOLDNUM,
+					(
+						(
+							T1.REAL_GOLD_NUMBER + T1.RESTORE_GOLD_NUMBER
+						) * T2.CONTENT
+					) AS GOLDCOSTNUM
+				FROM
+					(
+						SELECT
+							*
+						FROM
+							D_USER_ASSET
+						WHERE
+							USER_ID = ${user_id}
+					) T1
+				LEFT JOIN D_BUSINESS_CONFIG_GOLD T2 ON T1.BUSI_ID = T2.BUSI_ID
+				AND T2.STATE = '1'
+			) T3
+		LEFT JOIN D_BUSINESS_INFO T4 ON T3.BUSI_ID = T4.ROOT_ID
+	) T5
+GROUP BY
+	T5.USER_ID]]>
+	</sql>
+
+
+	<!-- 查询用户持有资产的商家列表 -->
+	<sql id="queryUserAssetBusiList" title="用户持有资产的商家列表以及商家处的资产与商家的含金量信息">
+		SELECT
+		T4.BUSI_NAME,
+		T3.*
+		FROM
+		(
+		SELECT
+		T1.BUSI_ID,
+		T1.USER_ID,
+		T1.REAL_GOLD_NUMBER AS REALGOLDNUM,
+		T1.RESTORE_GOLD_NUMBER AS RESTOREGOLDNUM,
+		T1.CAVIAR_NUMBER AS
+		CAVIARNUMBER,
+		T1.CAVIARE_NUMBER AS CAVIARENUMBER,
+		T2.CONTENT AS
+		GOLDRATIO,
+		(
+		T1.REAL_GOLD_NUMBER + T1.RESTORE_GOLD_NUMBER
+		) AS
+		COUNTGOLDNUM,
+		(
+		(
+		T1.REAL_GOLD_NUMBER + T1.RESTORE_GOLD_NUMBER
+		) *
+		T2.CONTENT
+		) AS GOLDCOSTNUM
+		FROM
+		(
+		SELECT
+		*
+		FROM
+		D_USER_ASSET
+		WHERE
+		USER_ID =
+		${user_id}
+		) T1
+		LEFT JOIN D_BUSINESS_CONFIG_GOLD T2 ON T1.BUSI_ID =
+		T2.BUSI_ID
+		AND
+		T2.STATE = '1'
+		) T3
+		LEFT JOIN D_BUSINESS_INFO T4 ON
+		T3.BUSI_ID = T4.ROOT_ID
+	</sql>
+
+
+	<!-- 商家相关信息 -->
+	<sql id="queryMerchantGoldContent" title="查询某一商家的货币的含金量">
+		<![CDATA[SELECT
+		1 / (
+		(give_number +
+		base_number) / base_number
+		) AS goldRatio,busi_id
+		FROM
+		d_busi_gold_content t5
+		WHERE
+		t5.EFF_STATE='1'
+		AND CURRENCY_TYPE=${currency_type}
+		And
+		t5.busi_id=${busi_id}]]>
+	</sql>
+
+
+	<sql id="queryOrderRaiseNumByOrderId" title="查询订单的筹集到的金额">
+		select sum(asset_num)
+		as raiseNum from d_user_consume_order_asset_detail t1
+		where
+		t1.order_id=${order_id}
+	</sql>
+
+
+	<sql id="queryMayTransMerchantListAndGoldContent" title="查询可选的金币划转商家列表">
+		<![CDATA[SELECT
+	JOIN1.BUSI_ID,
+	JOIN1.REAL_GOLD_NUMBER,
+	JOIN1.RESTORE_GOLD_NUMBER,
+	JOIN2.GOLDRATIO
+FROM
+	(
+		SELECT
+			BUSI_ID,
+			REAL_GOLD_NUMBER,
+			RESTORE_GOLD_NUMBER
+		FROM
+			D_USER_ASSET T3
+		WHERE
+			T3.USER_ID = ${user_id}
+		AND T3.BUSI_ID IN (
+			SELECT
+				T1.RECEIVE_BUSI_ID AS BUSI_ID
+			FROM
+				D_BUSI_ACCEPT_INFO T1
+			WHERE
+				T1.REQUEST_BUSI_ID = ${opt_busi_id}
+			AND STATE = 2
+		)
+	) JOIN1
+LEFT JOIN (
+	SELECT
+		T5.CONTENT AS GOLDRATIO,
+		T5.BUSI_ID
+	FROM
+		D_BUSINESS_CONFIG_GOLD T5
+	WHERE
+		T5.STATE = '1'
+) JOIN2 ON JOIN1.BUSI_ID = JOIN2.BUSI_ID
+AND JOIN2.GOLDRATIO IS NOT NULL]]>
+	</sql>
+
+
+	<!-- 查询用户持有资产的商家列表 -->
+	<sql id="queryUserInBusinessMerchantList" title="用户发生业务的商家列表">
+		SELECT
+		t2.busi_id,t3.BUSI_NAME
+		FROM
+		(
+		SELECT
+		t1.*
+		FROM
+		d_user_asset t1
+		WHERE
+		user_id
+		=${user_id}
+		) t2
+		LEFT
+		JOIN d_business_info t3 ON t3.ROOT_ID = t2.busi_id
+	</sql>
+
+
+	<sql id="queryMerchantCurrencyRatio" title="查询商家的消费返点设置策略">
+	<![CDATA[SELECT
+	t1.BASE_NUMBER,
+	t1.GIVE_NUMBER,
+	t1.CURRENCY_TYPE,
+	t1.BUSI_ID,
+	t1.EFF_TIME,
+	t1.GIVE_NUMBER / t1.BASE_NUMBER as ratio,
+	CASE
+WHEN t1.CURRENCY_TYPE = '1' THEN
+	'商劵'
+WHEN t1.CURRENCY_TYPE = '3' THEN
+	'金币'
+WHEN t1.CURRENCY_TYPE = '2' THEN
+	'金宝'
+END AS currency_type_desc
+FROM
+	d_busi_gold_content t1
+WHERE
+	t1.BUSI_ID = ${busi_id}
+AND EFF_STATE = '1']]>
+	</sql>
+
+	<sql id="queryMerchantListByScope" title="按照分类返回商家列表">
+		<![CDATA[select
+		t2.*,t3.BUY_INFO,t3.COORDS,t3.recommend_Commodity_Text,t3.IMAGE_TEXT_INFO
+		from (
+		SELECT
+		t1.BUSI_NAME,t1.BUSI_TEL,t1.BUSI_ADDRESS,t1.ROOT_ID
+		FROM
+		d_business_info t1
+		WHERE
+		t1.ROOT_ID IN (
+		SELECT
+		busi_id
+		FROM
+		d_business_nature c
+		WHERE
+		c.type_code ='${scopeTypeCode}'
+		)) t2 left join d_business_detail_info t3 on t2.ROOT_ID=t3.BUSI_ID]]>
+
+	</sql>
+
+
+
+	<sql id="queryMerchantListByScopeAndOrder" title="按照不同的条件进行排序">
+		<![CDATA[SELECT
+		t1.id,
+		t1.BUSI_NAME,
+		t1.BUSI_TEL,
+		t1.BUSI_ADDRESS,
+		t1.ROOT_ID
+		FROM
+		d_business_info t1
+		WHERE
+		t1.detail_info_state = 1
+		AND t1.ROOT_ID IN (
+		SELECT
+		busi_id
+		FROM
+		d_business_nature t2
+		WHERE
+		t2.type_state = '1'
+		AND t2.type_code = '202'
+		)]]>
+	</sql>
+
+
+	<!-- 海信SQl开始 -->
+	<sql id="getFriendList" title="获取双方关注的好友">
+		 <![CDATA[SELECT    
+		 D.HEAD_PIC,    
+		 D.NICKNAME,    
+		 S.SEA_CHART_ID,    
+		 D.ROOT_ID,    
+		 S.UNDER_WRITE    
+		FROM    
+		 t_login_user_customer_info D    
+		 LEFT JOIN D_SEA_CHART_USER_INFO S    
+		 ON D.ROOT_ID = S.USER_ID    
+		WHERE D.ROOT_ID IN    
+		(    
+		SELECT RS2.USER_ID FROM    
+		(SELECT * FROM D_SEA_CHART_ATT_INFO WHERE USER_ID =${userId}) RS1    
+		RIGHT JOIN    
+		(SELECT * FROM D_SEA_CHART_ATT_INFO WHERE ATT_USER_ID =${userId}) RS2    
+		ON RS1.USER_ID = RS2.ATT_USER_ID    
+		GROUP BY 1    
+		)  ]]>
+	</sql>
+	<sql id="getAttOwnFriendList" title="获取关注我的好友列表">
+
+	 <![CDATA[SELECT     
+	 D.HEAD_PIC,     
+	 D.NICKNAME,     
+	 S.SEA_CHART_ID,     
+	 D.ROOT_ID,     
+	 S.UNDER_WRITE     
+	FROM     
+	 D_CUSTER_INFO D     
+	 LEFT JOIN D_SEA_CHART_USER_INFO S     
+	 ON D.ROOT_ID = S.USER_ID     
+	WHERE D.ROOT_ID IN     
+	(     
+	SELECT USER_ID FROM D_SEA_CHART_ATT_INFO WHERE ATT_USER_ID =${userId}
+	)  ]]>
+
+	</sql>
+	<sql id="getOwnAttFriendList" title="获取我关注的好友列表">
+
+	 <![CDATA[SELECT     
+	 D.HEAD_PIC,     
+	 D.NICKNAME,     
+	 S.SEA_CHART_ID,     
+	 D.ROOT_ID,     
+	 S.UNDER_WRITE     
+	FROM     
+	 D_CUSTER_INFO D          
+	 LEFT JOIN D_SEA_CHART_USER_INFO S     
+	 ON D.ROOT_ID = S.USER_ID     
+	WHERE D.ROOT_ID IN     
+	(     
+	SELECT ATT_USER_ID FROM D_SEA_CHART_ATT_INFO WHERE USER_ID =${userId}
+	)  ]]>
+
+	</sql>
+	<sql id="getSeaChatInfo" title="获取用户的海信基础信息">
+		<![CDATA[SELECT d.head_pic,d.nickname,s.sea_chart_id,d.root_id,s.under_write 
+		FROM D_CUSTER_INFO d LEFT JOIN D_SEA_CHART_USER_INFO s 
+		ON d.root_id = s.user_id WHERE d.root_id=${userId}]]>
+	</sql>
+	<sql id="findFriend" title="查询海信用户">
+
+	<![CDATA[SELECT     
+	D.HEAD_PIC,     
+	D.NICKNAME,     
+	S.SEA_CHART_ID,     
+	D.ROOT_ID,     
+	S.UNDER_WRITE     ,
+	CASE WHEN rs1.user_id IS NOT NULL AND rs2.user_id IS NOT NULL THEN 1
+	WHEN rs1.user_id IS NOT NULL AND rs2.user_id IS NULL THEN 2 
+	WHEN rs1.user_id IS NULL AND rs2.user_id IS NOT NULL THEN 3 
+	WHEN rs1.user_id IS NULL AND rs2.user_id IS NULL THEN 4 END relationType
+	FROM     
+	D_CUSTER_INFO D          
+	LEFT JOIN D_SEA_CHART_USER_INFO S     
+	ON D.ROOT_ID = S.USER_ID     
+	LEFT JOIN T_LOGIN_USER L 
+	ON d.ROOT_ID = l.root_id
+	LEFT JOIN 
+	( SELECT user_id,att_user_id FROM D_SEA_CHART_ATT_INFO WHERE user_id=${optUserId} )rs1
+	ON rs1.att_user_id=l.root_id
+	LEFT JOIN 
+	( SELECT user_id,att_user_id FROM D_SEA_CHART_ATT_INFO WHERE att_user_id=${optUserId} )rs2
+	ON rs2.user_id=l.root_id
+	WHERE L.mobile = ${condition} 
+	OR s.SEA_CHART_ID = ${condition}  ]]>
+
+	</sql>
+	<sql id="attenFriend" title="关注好友">
+
+		<![CDATA[INSERT INTO D_SEA_CHART_ATT_INFO (user_id,att_user_id) VALUES(${optUserId},${userId})]]>
+
+	</sql>
+	<sql id="cancelAttenFriend" title="取消关注好友">
+
+		<![CDATA[DELETE FROM D_SEA_CHART_ATT_INFO WHERE user_id = ${optUserId} and att_user_id = ${userId}  ]]>
+
+	</sql>
+	<sql id="checkSeaChat" title="海信号验证接口">
+
+		<![CDATA[SELECT * FROM D_SEA_CHART_USER_INFO WHERE SEA_CHART_ID = '${seaChatNum}'  ]]>
+
+	</sql>
+	<sql id="saveSeaChatHis" title="保存用户的聊天记录">
+
+		<![CDATA[INSERT INTO d_sea_chat_person_his (send_user_id,receiv_user_id,send_time,content) VALUES ${value}]]>
+
+	</sql>
+
+	<sql id="invalidNotice" title="将系统通知置为失效">
+		<![CDATA[
+		update d_notice set notice_status = 0 where id = ${invalidNotice}
+		]]>
+	</sql>
+	<sql id="queryUserHisory" title="查询用户收到的信息列表">
+		<![CDATA[
+		SELECT u.nick_name AS sendUserNickName, h.send_user_root_id AS sendUserRootId,h.content,DATE_FORMAT(h.send_time,'%Y-%m-%d %H:%i:%s') AS sendTime 
+		FROM d_sea_chat_person_his h LEFT JOIN t_login_user_customer_info u 
+		ON (h.send_user_root_id = u.root_id)
+		WHERE h.send_time >= '${compTime}'
+		AND h.receiv_user_root_id = '${userRootId}' 
+		${dynaSql}
+		]]>
+	</sql>
+
+
+
+
+	<!-- 海信SQl结束 -->
+
+
+
+	<sql id="findMerchantListNearBy" title="查找用户附件的商家">
+	 <![CDATA[         SELECT
+	T2.ROOT_ID,
+	T2.BUSI_NAME,
+	T2.BUSI_ADDRESS,
+	T2.BUSI_TEL,
+	T2.HEAD_PIC_URL,
+	T2.BUSI_DESC,
+  T2.RECOMMEND_COMMODITY_TEXT,
+	T3.GEOHASH_POINTER,
+	T3.POINTER_LAT,
+	T3.POINTER_LNG,
+	T4.RECOMMEND_STATE,
+	T4.ABNORMAL_STATE,
+	T4.ALLIANCE_STATE
+FROM
+	(
+		SELECT
+			T1.ROOT_ID,
+			T1.BUSI_ADDRESS,
+			T1.BUSI_NAME,
+			T1.BUSI_TEL,
+			T1.HEAD_PIC_URL,
+			T1.BUSI_DESC,
+			T1.RECOMMEND_COMMODITY_TEXT
+		FROM
+			D_BUSINESS_INFO T1
+		WHERE
+			T1.ROOT_ID IN (
+				SELECT
+					BUSI_ID
+				FROM
+					D_BUSINESS_STATE TT2
+				WHERE
+					TT2.CLASSIFY_STATE = '1'
+				AND TT2.EXPAND_STATE = '1'
+				AND TT2.POINT_STATE = '1'
+				AND TT2.BUSI_ID IN (
+					SELECT
+						TT1.BUSI_ID
+					FROM
+						D_BUSINESS_NATURE TT1
+					WHERE
+						TT1.SCOPE_CODE LIKE '${scopeCode}%'
+				)
+				AND TT2.BUSI_ID IN (
+					SELECT
+						TT3.BUSI_ID
+					FROM
+						D_BUSINESS_CONFIG_POINT TT3
+					WHERE
+						TT3.GEOHASH_POINTER LIKE '${geohash}%'
+				)
+			)
+	) T2
+LEFT JOIN D_BUSINESS_CONFIG_POINT T3 ON T2.ROOT_ID = T3.BUSI_ID
+LEFT JOIN D_BUSINESS_STATE T4 ON T2.ROOT_ID = T4.BUSI_ID]]>
+	</sql>
+
+	<!-- 互认协议SQl开始 -->
+	<sql id="agreementForOne" title="查询哪些商家接收我金币的消费">
+		<![CDATA[
+		SELECT date_format(gold.REQUEST_TIME,'%Y-%m-%d %H:%i:%s') AS REQUEST_TIME,date_format(gold.EFF_TIME,'%Y-%m-%d %H:%i:%s') AS EFF_TIME,date_format(gold.EXP_TIME,'%Y-%m-%d %H:%i:%s') AS EXP_TIME,
+		date_format(gold.REACH_TIME,'%Y-%m-%d %H:%i:%s') AS REACH_TIME,
+		busi.BUSI_NAME,busi.BUSI_TEL,busi.BUSI_ADDRESS,busi.root_id
+		FROM D_BUSI_ACCEPT_INFO gold LEFT JOIN 
+		D_BUSINESS_INFO busi ON 
+		busi.root_id = gold.REQUEST_BUSI_ID
+		WHERE gold.RECEIVE_BUSI_ID  = ${optUserId}
+		AND busi.busi_name LIKE '%${busiCondition}%'
+		limit ${pageStart},${pageSize}
+		]]>
+	</sql>
+	<sql id="agreementForTwo" title="哪些商家发起了代我充值的协议">
+		<![CDATA[
+		SELECT date_format(gold.REQUEST_TIME,'%Y-%m-%d %H:%i:%s') AS REQUEST_TIME,date_format(gold.EFF_TIME,'%Y-%m-%d %H:%i:%s') AS EFF_TIME,date_format(gold.EXP_TIME,'%Y-%m-%d %H:%i:%s') AS EXP_TIME,
+		date_format(gold.REACH_TIME,'%Y-%m-%d %H:%i:%s') AS REACH_TIME,CONCAT ( LEFT (gold.RATIO *100,4),'%') as RATIO,
+		busi.BUSI_NAME,busi.BUSI_TEL,busi.BUSI_ADDRESS,busi.root_id
+		FROM D_CUST_AGENT_REACHARGE_RELATION gold LEFT JOIN 
+		D_BUSINESS_INFO busi ON 
+		busi.root_id = gold.REQUEST_BUSI_ID
+		WHERE gold.RECEIVE_BUSI_ID  = ${optUserId}
+		AND busi.busi_name LIKE '%${busiCondition}%'
+		limit ${pageStart},${pageSize} 
+		]]>
+	</sql>
+	<sql id="agreementForThree" title="我发起了向哪些商家的金币消费协议">
+		<![CDATA[
+		SELECT date_format(gold.REQUEST_TIME,'%Y-%m-%d %H:%i:%s') AS REQUEST_TIME,date_format(gold.EFF_TIME,'%Y-%m-%d %H:%i:%s') AS EFF_TIME,date_format(gold.EXP_TIME,'%Y-%m-%d %H:%i:%s') AS EXP_TIME,
+		date_format(gold.REACH_TIME,'%Y-%m-%d %H:%i:%s') AS REACH_TIME,
+		busi.BUSI_NAME,busi.BUSI_TEL,busi.BUSI_ADDRESS,busi.root_id
+		FROM D_BUSI_ACCEPT_INFO gold LEFT JOIN 
+		D_BUSINESS_INFO busi ON 
+		busi.root_id = gold.RECEIVE_BUSI_ID
+		WHERE gold.REQUEST_BUSI_ID  = ${optUserId}
+		AND busi.busi_name LIKE '%${busiCondition}%'
+		limit ${pageStart},${pageSize}
+		]]>
+	</sql>
+	<sql id="agreementForFour" title="我发起了向哪些商家的代充值协议">
+		<![CDATA[
+		SELECT date_format(gold.REQUEST_TIME,'%Y-%m-%d %H:%i:%s') AS REQUEST_TIME,date_format(gold.EFF_TIME,'%Y-%m-%d %H:%i:%s') AS EFF_TIME,date_format(gold.EXP_TIME,'%Y-%m-%d %H:%i:%s') AS EXP_TIME,
+		date_format(gold.REACH_TIME,'%Y-%m-%d %H:%i:%s') AS REACH_TIME,CONCAT ( LEFT (gold.RATIO *100,4),'%') as RATIO,
+		busi.BUSI_NAME,busi.BUSI_TEL,busi.BUSI_ADDRESS,busi.root_id
+		FROM D_CUST_AGENT_REACHARGE_RELATION gold LEFT JOIN 
+		D_BUSINESS_INFO busi ON 
+		busi.root_id = gold.RECEIVE_BUSI_ID
+		WHERE gold.REQUEST_BUSI_ID  = ${optUserId}
+		AND busi.busi_name LIKE '%${busiCondition}%'
+		limit ${pageStart},${pageSize}
+		]]>
+	</sql>
+	<sql id="saveBusiAccept" title="保存金币互认协议">
+		<![CDATA[
+		INSERT INTO d_busi_accept_info
+            (REQUEST_BUSI_ID,
+             RECEIVE_BUSI_ID,
+             REQUEST_TIME,
+             EFF_TIME,
+             EXP_TIME,
+             REACH_TIME,
+             STATE)
+		VALUES (
+		        ${optUserId},
+		        ${receiveUserId},
+		        CURRENT_TIMESTAMP,
+		        '${effTime}',
+		        '${expTime}',
+		        CURRENT_TIMESTAMP,
+		        ${state});
+		]]>
+	</sql>
+	<sql id="saveAgentRecharge" title="代充值协议请求发起">
+		<![CDATA[
+		INSERT INTO d_cust_agent_reacharge_relation
+            (REQUEST_BUSI_ID,
+             RECEIVE_BUSI_ID,
+             RATIO,
+             EFF_TIME,
+             EXP_TIME,
+             REQUEST_TIME,
+             STATE)
+		VALUES (
+		        ${optUserId},
+		        ${receiveUserId},
+		        ${ratio},
+		        '${effTime}',
+		        '${expTime}',
+		        CURRENT_TIMESTAMP,
+		        ${state});
+		]]>
+	</sql>
+	<sql id="acceptAgentRecharge" title="被请求方处置代充值协议">
+		<![CDATA[
+		update d_cust_agent_reacharge_relation set REACH_TIME=CURRENT_TIMESTAMP,STATE=${state} where id=${agentRechargeId}
+		]]>
+	</sql>
+	<sql id="updateStatusForValid" title="根据协议的生效及失效时间，修改“商家代充值互认关系表”中的status字段为已生效">
+		<![CDATA[
+	    UPDATE d_cust_agent_reacharge_relation SET state = 2 WHERE state = 1 AND REACH_TIME IS NOT NULL
+		AND REACH_TIME <> '0000-00-00 00:00:00'
+		AND CURRENT_TIMESTAMP > eff_time AND CURRENT_TIMESTAMP < EXP_TIME
+		]]>
+	</sql>
+	<sql id="updateStatusForInValid" title="根据协议的生效及失效时间，修改“商家代充值互认关系表”中的status字段为已失效">
+		<![CDATA[
+		UPDATE d_cust_agent_reacharge_relation SET state = 5 WHERE state = 2 
+		AND CURRENT_TIMESTAMP > EXP_TIME
+		]]>
+	</sql>
+	<!-- 互认协议SQl结束 -->
+	<!-- 环海SQl开始 -->
+
+	<sql id="queryUserFishCreel" title="查询用户的鱼篓数据">
+		<![CDATA[
+		SELECT FISH_ID,FISH_TYPE,ROOT_ID,DATA_TIME,USER_ID,HAS_TAKE,HAS_SOLUTION_FILLET,CURRENT_FILLET,DUE_TIME,PUSH_TYPE,BUSI_ID,M.NAME
+		,CASE WHEN DUE_TIME <= NOW() THEN '1' ELSE '0' END HAS_DUE,c.EXPRESS_FISH_FILLET,c.FILLET_TYPE 
+		FROM
+		  d_user_fish_creel c LEFT JOIN t_login_merchant_info m ON c.BUSI_ID = m.client_rid
+		WHERE c.USER_ID='${optUser}' 
+		]]>
+	</sql>
+
+	<sql id="queryUserFishAsset" title="查询用户的环海资产">
+		<![CDATA[
+		SELECT a.BUSI_ID,a.CAVAIAR_NUMBER,a.CAVAIAR_TYPE,a.LOGIN_UID,d.ENTRY_CONTENT 
+		FROM d_user_fish_asset a
+		LEFT JOIN d_dictionary d
+		ON a.CAVAIAR_TYPE = d.ENTRY_ID
+		WHERE d.type_id = '3'
+		AND a.CAVAIAR_TYPE = d.ENTRY_ID
+		and a.login_uid = '${optUser}'
+		${dynaSql} 
+		]]>
+	</sql>
+
+	<sql id="queryFishAsset" title="商家查询放鱼信息">
+		<![CDATA[
+		select p.data_time,d.entry_id_value,fish_number,fish_caviar_number,fish_fillet
+		,case when p.state = '1' then '生效中' when p.state = '2' then '已过期' end as status,due_time,
+		fish_gold_number,surplus_fish_number,surplus_fish_caviar_number,fishing_number,
+		has_fill_caviar
+		from d_push_fish_history p left join d_dictionary d 
+		on p.fish_type = d.entry_id
+		where d.type_id=3 and p.busi_id='${busiId}' 
+		${dynaSql} 
+		]]>
+	</sql>
+
+	<sql id="updateUserFishAssetForUpdate" title="取籽后，更新用户的鱼籽数据">
+		<![CDATA[
+		update d_user_fish_asset set CAVAIAR_NUMBER = CAVAIAR_NUMBER + ${cavaiarNumber} where 
+		LOGIN_UID='${loginUid}' and BUSI_ID='${busiId}' and CAVAIAR_TYPE='${cavaiarType}'
+		]]>
+	</sql>
+	<!-- 环海SQl开始 -->
+	<sql id="updateUserFishAssetForInsert" title="取籽后，保存用户与商家的资产对应关系">
+		<![CDATA[
+		INSERT INTO d_user_fish_asset (LOGIN_UID,BUSI_ID,CAVAIAR_NUMBER,CAVIARE_NUMBER,CAVAIAR_TYPE) 
+		     VALUES('${loginUid}','${busiId}','${cavaiarNumber}','0','${cavaiarType}')
+		]]>
+	</sql>
+
+	<sql id="getBusiFilletContent" title="获取传入商家当前发鱼的明排内容">
+		<![CDATA[
+		SELECT entry_id_value AS seaStatus,mark FROM d_dictionary WHERE entry_id = 'DOPER_SEA_LOCK'
+		]]>
+	</sql>
+	<sql id="checkSeaAccess" title="查询环海的开放状态">
+		<![CDATA[
+		SELECT entry_id_value AS seaStatus,mark FROM d_dictionary WHERE entry_id = 'DOPER_SEA_LOCK'
+		]]>
+	</sql>
+	<sql id="saveFishOptLog" title="保存一条环海中操作鱼的记录">
+		<![CDATA[
+		INSERT INTO d_catch_fish_history (OPT_TYPE,FISH_ID,FISH_TYPE,BUSI_ID,OPT_USER_ID,FISH_FILLET,PWD_FILLET,OPT_RS,RELEASE_CAVIAR_NUMBER,BACH_ID)  
+						               VALUES('${optType}' ,'${fishId}','${fishType}','${busiId}','${optUserId}','${fishFillet}' 
+						               ,'${pwdFillet}' ,'${optRs}' ,'${releaseCaviarNumber}','${bachId}')
+		]]>
+	</sql>
+	<!-- 环海SQl结束 -->
+	<!-- 账务任务 -->
+	<sql id="BusinessAccountRecordDay" title="日结账务">
+<![CDATA[
+INSERT INTO d_business_account_day (busi_id, DAY, debit, credit) SELECT
+	t1.busi_id,
+	t1.rdate,
+	sum(t1.debit) AS debit,
+	sum(t1.credit) AS credit
+FROM
+	(
+		SELECT
+			*
+		FROM
+			d_business_account_detail b
+		WHERE
+			DATE_FORMAT(b.rdate, '%Y-%d-%m') = '${day}'
+	) t1
+GROUP BY
+	t1.busi_id,
+	t1.rdate
+]]>
+	</sql>
+
+	<sql id="BusinessAccountRecordSettle" title="商家结账">
+<![CDATA[
+     INSERT INTO d_business_account_bursar (
+	check_day,
+	busi_id,
+	debit,
+	credit,
+	balance
+) SELECT
+	str_to_date('${rDate}', '%Y-%m-%d') AS check_day,
+	t1.busi_id,
+	t1.this_credit + IFNULL(t2.credit, 0),
+	t1.this_debit + IFNULL(t2.debit, 0),
+	(
+		t1.this_debit - t1.this_credit
+	) + IFNULL(t2.balance, 0)
+FROM
+	(
+		SELECT
+			busi_id,
+			sum(debit) AS this_debit,
+			sum(credit) AS this_credit
+		FROM
+			d_business_account_day
+		WHERE
+			DAY BETWEEN str_to_date('${sDate}', '%Y-%m-%d')
+		AND str_to_date('${eDate}', '%Y-%m-%d')
+		GROUP BY
+			busi_id
+	) t1
+LEFT JOIN d_business_account_bursar t2 ON t1.busi_id = t2.busi_id
+AND t2.check_day = str_to_date('${sDate}', '%Y-%m-%d')
+]]>
+	</sql>
+
+
+
+	<sql id="queryProxyRechangeProtocol">
+<![CDATA[SELECT
+	t1.*, t2.client_rid,
+	CONCAT(t2. NAME,ifnull(t2.remarks,'')) as name,
+	t2.contact_number
+FROM
+	(
+		SELECT
+			id,
+			proxy_mid,
+			protocol_status,
+			request_time,
+			rebate_ratio
+		FROM
+			t_merchant_proxy_rechange_protocol
+		WHERE
+			provide_mid = ${proId}
+			and protocol_status='0'
+	) t1
+INNER JOIN t_login_merchant_info t2 ON t1.proxy_mid = t2.login_mid
+ORDER BY
+	t1.protocol_status DESC,
+	t1.request_time DESC
+	]]>
+	</sql>
+
+
+	<sql id="queryOwnerProxyRechangeProtocol">
+<![CDATA[SELECT
+	t1.*, t2.client_rid,
+	CONCAT(t2. NAME,ifnull(t2.remarks,'')) as name,
+	t2.contact_number
+FROM
+	(
+		SELECT
+			id,
+			provide_mid,
+			protocol_status,
+			request_time,
+			rebate_ratio
+		FROM
+			t_merchant_proxy_rechange_protocol
+		WHERE
+			proxy_mid = ${proId}
+	) t1
+INNER JOIN t_login_merchant_info t2 ON t1.provide_mid = t2.login_mid
+ORDER BY
+	t1.protocol_status DESC,
+	t1.request_time DESC
+	]]>
+	</sql>
+
+
+	<sql id="queryEnableProxyRechangeProtocol">
+<![CDATA[SELECT
+	t1.*, t2.client_rid,
+	CONCAT(t2. NAME,ifnull(t2.remarks,'')) as name,
+	t2.contact_number,
+	t2.client_strategy
+FROM
+	(
+		SELECT
+			id,
+			provide_mid,
+			protocol_status,
+			request_time,
+			rebate_ratio
+		FROM
+			t_merchant_proxy_rechange_protocol
+		WHERE
+			(proxy_mid = ${proId} or proxy_mid=${groupId})
+			and protocol_status='1' and and protocol_end_date >CURDATE()
+	) t1
+INNER JOIN t_login_merchant_info t2 ON t1.provide_mid = t2.login_mid
+ORDER BY
+	t1.request_time DESC
+	]]>
+	</sql>
+
+
+
+	<sql id="queryMerchantListByName">
+   <![CDATA[ SELECT
+	t2.client_rid,
+	t2.login_mid,
+	CONCAT(t2. NAME,ifnull(t2.remarks,'')) as name,
+	t2.address,
+	t2.bussiness_desc
+FROM
+	t_login_merchant_info t2
+WHERE 1=1 AND 
+	t2.login_mid IN (
+		SELECT
+			t1.id
+		FROM
+			t_login_merchant t1
+		WHERE
+			substring(t1.bit_status, 5, 1) = '4'
+	)
+	And
+ #if(!${search_word}) 1=1 #else 
+	t2. NAME LIKE '%${search_word}%' #end 
+ORDER BY
+	t2.utime DESC
+	]]>
+	</sql>
+
+
+	<sql id="queryUserInMerchantTransMerchantList">
+ <![CDATA[ SELECT
+	client_mid,basic_num,gift_num,(basic_num+gift_num) as countNum,sort_order
+FROM
+	t_user_gold_asset
+WHERE
+	client_uid = ${uid}
+AND client_mid IN (${rmlist})
+ORDER BY
+	sort_order
+]]>
+	</sql>
+
+	<sql id="queryChildMerchantList">
+ <![CDATA[ SELECT
+	t1.*, CONCAT(t2. NAME,ifnull(t2.remarks,'')) as fullName
+FROM
+	(
+		SELECT
+			id,
+			group_id
+		FROM
+			t_login_merchant
+		WHERE
+			group_id = ${mid} and group_id<>id and SUBSTRING(bit_status, 6, 1) = '4'
+	) t1
+LEFT JOIN t_login_merchant_info t2 ON t1.id = t2.login_mid
+]]>
+	</sql>
+
+
+
+	<!-- 账务任务 -->
+
+	<!-- 代充值协议、重做 -->
+	<!-- 自己发起的所有代充值协议列表 -->
+	<sql id="protocolSelfRequest">
+<![CDATA[SELECT
+	t2.*, t3.name,
+	t3.client_rid,
+	t3.client_strategy
+FROM
+	(
+		SELECT
+			t1.id,
+			t1.provide_mid,
+			t1.proxy_mid,
+			t1.protocol_status,
+			t1.rebate_ratio,
+			t1.protocol_start_date,
+			t1.protocol_end_date,
+			t1.request_time,
+			t1.reached_time,
+			case when t1.protocol_status='0' then '未审批'
+					 when t1.protocol_status='1' and t1.protocol_end_date>=CURDATE() then '已接受'
+					 when t1.protocol_status='1' and t1.protocol_end_date<CURDATE() then '已失效'
+					 when t1.protocol_status='-1' then '已拒绝'
+					 else '协议作废' end as status_name
+		FROM
+			t_merchant_proxy_rechange_protocol t1
+		WHERE
+			t1.proxy_mid = ${opId}
+	) t2
+INNER JOIN t_login_merchant_info t3 ON t2.provide_mid = t3.login_mid
+ORDER BY
+	t2.request_time DESC
+	]]>
+	</sql>
+
+	<!-- 可用的代充值协议 -->
+	<sql id="protocolSelfRequestEnable">
+<![CDATA[SELECT
+	t2.*, t3. NAME,
+	t3.client_rid,
+	t3.client_strategy
+FROM
+	(
+		SELECT
+			t1.id,
+			t1.provide_mid,
+			t1.proxy_mid,
+			t1.protocol_status,
+			t1.rebate_ratio,
+			t1.protocol_start_date,
+			t1.protocol_end_date,
+			t1.request_time,
+			t1.reached_time,
+			CASE
+		WHEN t1.protocol_status = '0' THEN
+			'未审批'
+		WHEN t1.protocol_status = '1'
+		AND t1.protocol_end_date >= CURDATE() THEN
+			'已接受'
+		WHEN t1.protocol_status = '1'
+		AND t1.protocol_end_date < CURDATE() THEN
+			'已失效'
+		WHEN t1.protocol_status = '-1' THEN
+			'已拒绝'
+		ELSE
+			'协议作废'
+		END AS status_name
+		FROM
+			t_merchant_proxy_rechange_protocol t1
+		WHERE
+			(
+				t1.proxy_mid = ${opId}
+				OR t1.proxy_mid = ${gid}
+			)
+		AND t1.protocol_status = '1'
+		AND t1.protocol_end_date >= CURDATE()
+	) t2
+INNER JOIN t_login_merchant_info t3 ON t2.provide_mid = t3.login_mid
+ORDER BY
+	t2.request_time DESC]]>
+	</sql>
+
+	<!-- 所有发给我的代充值协议 -->
+	<sql id="protocolRequestForMe">
+<![CDATA[SELECT
+	t2.*, t3. name,
+	t3.contact_number,
+	t3.bussiness_desc,
+	t3.notice
+FROM
+	(
+		SELECT
+			t1.id,
+			t1.provide_mid,
+			t1.proxy_mid,
+			t1.protocol_status,
+			t1.rebate_ratio,
+			t1.protocol_start_date,
+			t1.protocol_end_date,
+			t1.request_time,
+			t1.reached_time,
+			CASE
+		WHEN t1.protocol_status = '0' THEN
+			'未审批'
+		WHEN t1.protocol_status = '1'
+		AND t1.protocol_end_date >= CURDATE() THEN
+			'已接受'
+		WHEN t1.protocol_status = '1'
+		AND t1.protocol_end_date < CURDATE() THEN
+			'已失效'
+		WHEN t1.protocol_status = '-1' THEN
+			'已拒绝'
+		ELSE
+			'协议作废'
+		END AS status_name
+		FROM
+			t_merchant_proxy_rechange_protocol t1
+		WHERE
+			t1.provide_mid = ${opId}
+	) t2
+INNER JOIN t_login_merchant_info t3 ON t2.proxy_mid = t3.login_mid
+ORDER BY
+	t2.request_time DESC]]>
+	</sql>
+
+
+	<!-- 待审批的协议列表 -->
+	<sql id="protocoldetailedRequestForMe">
+<![CDATA[SELECT
+	t2.*, t3. name,
+	t3.contact_number,
+	t3.bussiness_desc,
+	t3.notice
+FROM
+	(
+		SELECT
+			t1.id,
+			t1.provide_mid,
+			t1.proxy_mid,
+			t1.protocol_status,
+			t1.rebate_ratio,
+			t1.protocol_start_date,
+			t1.protocol_end_date,
+			t1.request_time,
+			t1.reached_time,
+			CASE
+		WHEN t1.protocol_status = '0'   THEN
+			'未审批'
+		WHEN t1.protocol_status = '1'
+		AND t1.protocol_end_date >= CURDATE() THEN
+			'已接受'
+		WHEN t1.protocol_status = '1'
+		AND t1.protocol_end_date < CURDATE() THEN
+			'已失效'
+		WHEN t1.protocol_status = '-1' THEN
+			'已拒绝'
+		ELSE
+			'协议作废'
+		END AS status_name
+		FROM
+			t_merchant_proxy_rechange_protocol t1
+		WHERE
+		 t1.provide_mid = ${opId}
+		AND t1.protocol_status = '0'
+		AND t1.protocol_end_date >= CURDATE()
+	) t2
+INNER JOIN t_login_merchant_info t3 ON t2.proxy_mid = t3.login_mid
+ORDER BY
+	t2.request_time DESC]]>
+	</sql>
+
+
+	<!-- 当前生效的，已审批的 -->
+	<sql id="protocolsettledRequestForMe">
+<![CDATA[SELECT
+	t2.*, t3. name,
+	t3.contact_number,
+	t3.bussiness_desc,
+	t3.notice
+FROM
+	(
+		SELECT
+			t1.id,
+			t1.provide_mid,
+			t1.proxy_mid,
+			t1.protocol_status,
+			t1.rebate_ratio,
+			t1.protocol_start_date,
+			t1.protocol_end_date,
+			t1.request_time,
+			t1.reached_time,
+			CASE
+		WHEN t1.protocol_status = '0'   THEN
+			'未审批'
+		WHEN t1.protocol_status = '1'
+		AND t1.protocol_end_date >= CURDATE() THEN
+			'已接受'
+		WHEN t1.protocol_status = '1'
+		AND t1.protocol_end_date < CURDATE() THEN
+			'已失效'
+		WHEN t1.protocol_status = '-1' THEN
+			'已拒绝'
+		ELSE
+			'协议作废'
+		END AS status_name
+		FROM
+			t_merchant_proxy_rechange_protocol t1
+		WHERE
+			t1.provide_mid = ${opId}
+		AND t1.protocol_status = '1'
+	) t2
+INNER JOIN t_login_merchant_info t3 ON t2.proxy_mid = t3.login_mid
+ORDER BY
+	t2.request_time DESC]]>
+	</sql>
+
+	<!-- 商家信息未审核列表 -->
+	<sql id="merchantInfoPending">
+	<![CDATA[
+	SELECT
+	CONCAT(t2. NAME,ifnull(t2.remarks,'')) as name,
+	t2.login_mid,
+	t2.head_pic,
+	t2.contact_number,
+	t2.client_strategy,
+	t2.address,
+	t2.bussiness_desc,
+	t2.notice
+FROM
+	t_login_merchant_info t2
+WHERE
+	t2.login_mid IN (
+		SELECT
+			t1.id AS bitStatus
+		FROM
+			t_login_merchant t1
+		WHERE
+			SUBSTRING(t1.bit_status, 5, 1) = '2'
+	)
+	]]>
+	</sql>
+
+	<!--商家银行信息未审核列表 -->
+	<sql id="merchantBankInfoPending">
+	<![CDATA[
+	SELECT
+	CONCAT(t2. NAME,ifnull(t2.remarks,'')) as name,
+	t2.login_mid,
+	t2.head_pic,
+	t2.contact_number,
+	t2.client_strategy,
+	t2.address,
+	t2.bussiness_desc,
+	t2.notice
+FROM
+	t_login_merchant_info t2
+WHERE
+	t2.login_mid IN (
+		SELECT
+			t1.id AS bitStatus
+		FROM
+			t_login_merchant t1
+		WHERE
+			SUBSTRING(t1.bit_status, 4, 1) = '2'
+	)
+	]]>
+	</sql>
+	
+	
+	<sql id="merchantMemberList">
+	<![CDATA[
+	SELECT
+	t2.*, t3.login_name,
+	t3.reg_time,
+	t4.nick_name
+FROM
+	(
+		SELECT
+			t1.mid,
+			t1.uid,
+			t1.become_date
+		FROM
+			t_merchant_merber t1
+		WHERE
+			mid = ${mid}
+	) t2
+LEFT JOIN t_login_user t3 ON t2.uid = t3.root_id
+LEFT JOIN t_login_user_customer_info t4 ON t2.uid = t4.root_id
+LEFT JOIN t_client_user t5 ON t2.uid = t5.root_id
+	]]>
+	</sql>
+	
+	<!-- 查询商家的公开信息 -->
+	<sql id="getMerchantPublishInfo">
+	<![CDATA[
+	SELECT
+	t1.id,
+	t1. NAME,
+	t1.contact_number,
+	t1.address,
+	t1.point_lat,
+	t1.point_lng,
+	t1.geo_hash_code,
+	t1.head_pic,
+	t1.bussiness_desc,
+	t1.notice,
+	t1.remarks,
+	t1.web_link,
+	t1.nick_name
+FROM
+	t_login_merchant_info t1
+WHERE
+	t1.id = ${mid}
+	]]>
+	</sql>
+	
+	
+	<sql id="getDeviceRecordInfo">
+	<![CDATA[
+	select * from (
+SELECT
+	t1.purchaser AS target_merchant,
+	t1.Saler AS source_merchant,
+	t1.trade_time,
+	'出售' AS trade_type
+FROM
+	t_device_deal_record t1
+WHERE
+	record_no =  ${sn}
+UNION
+	SELECT
+		t2.hirer AS target_merchant,
+		t2.landlord AS source_merchant,
+		t2.trade_time,
+		'出租' AS trade_type
+	FROM
+		t_device_lease_record t2
+	WHERE
+		record_no = ${sn}
+) as t3 order by t3.trade_time desc
+		]]>
+	</sql>
+	
+	
+	
+	<sql id="queryMerchantRechangeRecord">
+	<![CDATA[
+	SELECT
+	t1.order_num,
+	t1.utime AS operation_time,
+	t1.rechange_number AS base_num,
+	t1.gift_number AS largess_num,
+	t1.user_client_rid AS u_sys_id,
+	IFNULL(
+		t2.login_name,
+		'未注册用户'
+	) AS u_name,
+	t1.client_mid AS rechange_merchant_id,
+	t3. NAME AS rechange_merchant_name,
+	t1.opt_mid AS operator_merchant_id,
+	t4. NAME AS operator_merchant_name,
+	t1.order_type,
+	CASE
+WHEN t1.order_type = '2' THEN
+	'代充值'
+WHEN t1.order_type = '1' THEN
+	'充值'
+ELSE
+	'其它'
+END AS order_tname,
+ t1.order_status,
+ CASE
+WHEN t1.order_status = '1' THEN
+	'创建'
+WHEN t1.order_status = '2' THEN
+	'订单校验成功'
+WHEN t1.order_status = '3' THEN
+	'订单提交成功'
+WHEN t1.order_status = '-1' THEN
+	'客户端取消交易'
+WHEN t1.order_status = '4' THEN
+	'订单扣款环节失败'
+ELSE
+	'未知错误'
+END AS order_sname
+FROM
+	(
+		SELECT
+			tbase.*
+		FROM
+			t_user_rechange_record tbase
+		WHERE
+			tbase.utime BETWEEN str_to_date('${startDate}', '%Y-%m-%d')
+		 AND  str_to_date('${endDate}', '%Y-%m-%d') 
+		 AND #if(!${order_type}) 1=1 #else order_type='${order_type}' #end
+		 AND #if(!${order_status}) 1=1 #else order_status='${order_status}' #end
+		  AND #if(!${u_sys_id}) 1=1 #else user_client_rid=${u_sys_id} #end
+		  AND #if(!${opt_mid}) 1=1 #else opt_mid=${opt_mid} #end
+		  AND #if(!${client_mid}) 1=1 #else client_mid=${client_mid} #end
+	) t1
+LEFT JOIN t_login_user t2 ON t1.user_client_rid = t2.root_id
+LEFT JOIN t_login_merchant_info t3 ON t1.client_mid = t3.login_mid
+LEFT JOIN t_login_merchant_info t4 ON t1.opt_mid = t4.login_mid
+		]]>
+	</sql>
+	
+	
+<sql id="queryMerchantRechangeGroupList">
+	<![CDATA[
+	SELECT
+	sum(rechange_number) AS baseCountNum,
+	sum(gift_number) AS largessCountNum,
+	t1.order_type,
+	CASE
+WHEN t1.order_type = '2' THEN
+	'代充值'
+WHEN t1.order_type = '1' THEN
+	'充值'
+ELSE
+	'其它'
+END AS order_tname,
+ t1.order_status,
+ CASE
+WHEN t1.order_status = '1' THEN
+	'创建'
+WHEN t1.order_status = '2' THEN
+	'订单校验成功'
+WHEN t1.order_status = '3' THEN
+	'订单提交成功'
+WHEN t1.order_status = '-1' THEN
+	'客户端取消交易'
+WHEN t1.order_status = '4' THEN
+	'订单扣款环节失败'
+ELSE
+	'未知错误'
+END AS order_sname
+FROM
+	t_user_rechange_record t1
+WHERE
+		 t1.utime BETWEEN str_to_date('${startDate}', '%Y-%m-%d')
+		 AND  str_to_date('${endDate}', '%Y-%m-%d') 
+		 AND #if(!${order_type}) 1=1 #else order_type='${order_type}' #end
+		 AND #if(!${order_status}) 1=1 #else order_status='${order_status}' #end
+		  AND #if(!${u_sys_id}) 1=1 #else user_client_rid=${u_sys_id} #end
+		  AND #if(!${opt_mid}) 1=1 #else opt_mid=${opt_mid} #end
+		  AND #if(!${client_mid}) 1=1 #else client_mid=${client_mid} #end
+GROUP BY
+	client_mid,
+	order_type,
+	order_status
+	]]>
+</sql>
+	
+
+
+</sqls>
+
+
+
+
+

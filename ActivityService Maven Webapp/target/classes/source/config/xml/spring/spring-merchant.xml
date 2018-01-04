@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd">
+	<!-- <bean id="helloControl" class="org.chengbin.struts2.SpringAction"></bean> -->
+
+	<!-- 用户升级为商家的Service -->
+	<bean id="merchntUpgradeService"
+		class="com.doper.card.service.merchntBehavior.impl.MerchntUpgradeServiceImpl"></bean>
+	<!-- 商家的数据初始相关Service -->
+	<bean id="merchntConstructorService"
+		class="com.doper.card.service.merchntBehavior.impl.MerchntConstructorServiceImpl"></bean>
+		
+	<bean id="merchantConfigSetService" class="com.doper.card.service.merchntBehavior.impl.MerchantConfigSetServiceImpl">
+	</bean>
+	
+	
+	<!-- 获取商家的相关资产配置，后期如需要考虑效率，可将此处信息存放到redis上，故通过独立的service来存放 -->
+	<bean id="merchantMoneyInfoService" class="com.doper.card.service.merchntBehavior.impl.MerchantMoneyInfoServiceImpl">
+    </bean>
+    
+
+	
+	
+</beans>

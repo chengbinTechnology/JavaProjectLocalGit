@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Exception>
+	<ExceptionDetails>
+		<PresentException code="101" message="对不起、业务执行异常">
+		</PresentException>
+		<PresentException code="102" message="对不起、系统执行异常">
+		</PresentException>
+		<PresentException code="103" message="对不起、权限边界错误">
+		</PresentException>
+		<PresentException code="104" message="对不起、资源边界错误">
+		</PresentException>
+		<PresentException code="105" message="对不起、对象不存在">
+		</PresentException>
+	</ExceptionDetails>
+</Exception>

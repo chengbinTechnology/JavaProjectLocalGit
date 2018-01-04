@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:task="http://www.springframework.org/schema/task"  
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context   
+        http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+        http://www.springframework.org/schema/mvc      
+        http://www.springframework.org/schema/mvc/spring-mvc-4.0.xsd
+        http://www.springframework.org/schema/aop 
+        http://www.springframework.org/schema/aop/spring-aop-4.0.xsd 
+        http://www.springframework.org/schema/tx 
+        http://www.springframework.org/schema/tx/spring-tx-4.0.xsd
+        http://www.springframework.org/schema/task  
+        http://www.springframework.org/schema/task/spring-task-4.0.xsd 
+        "  default-autowire="byName" default-lazy-init="true">
+	<!-- 启用注解方式 -->
+	<mvc:annotation-driven />  <!-- 支持spring3.0新的注解方式 -->
+	<!-- 自动扫描Service与Dao的包路径 -->
+	 <context:component-scan base-package="com.newCloud.activity.dao.impl,com.newCloud.activity.service.impl" />  
+	<!-- 定时任务扫描注解 -->  
+	<task:annotation-driven/>  
+    <context:component-scan base-package="com.system.app.timetask"></context:component-scan>  
+    
+    <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">  
+       <property name="user" value="root"></property>  
+       <property name="password" value="admin"></property>  
+       <property name="driverClass" value="com.mysql.jdbc.Driver"></property>  
+       <property name="jdbcUrl" value="jdbc:mysql://localhost:3306/activitydatabase?characterEncoding=utf8"></property>  
+       <property name="initialPoolSize" value="5"></property>  
+       <property name="maxPoolSize" value="20"></property>  
+   </bean> 
+    
+    
+	<bean id="sessionFactory"
+		class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+		<property name="dataSource" ref="dataSource"></property>
+		<property name="configLocation" value="classpath:hibernate.cfg.xml">
+		</property>
+		<property name="mappingDirectoryLocations">
+			<list>
+				<value>classpath:/com/newCloud/activity/po/hbm/</value>
+			</list>
+		</property>
+	</bean>
+	
+	
+
+	<!-- spring事务处理配置 -->
+	<bean id="txManager"
+		class="org.springframework.orm.hibernate4.HibernateTransactionManager">
+		<property name="sessionFactory" ref="sessionFactory"></property>
+	</bean>
+	
+	<aop:config proxy-target-class="true">
+		<!-- 切入点指明了在执行Service的所有方法时产生事务拦截操作 -->
+		<aop:pointcut id="daoMethods"
+			expression="execution(* com.newCloud.activity.controller..*.*(..))" />
+		<!-- 定义了将采用何种拦截操作，这里引用到 txAdvice -->
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="daoMethods" />
+	</aop:config>
+
+	<!-- 需要引入tx的命名空间 -->
+	<!-- 这是事务通知操作，使用的事务管理器引用自 transactionManager -->
+	<tx:advice id="txAdvice" transaction-manager="txManager">
+		<tx:attributes>
+			<!-- 指定哪些方法需要加入事务，这里懒惰一下全部加入，可以使用通配符来只加入需要的方法 -->
+			<tx:method name="*" propagation="REQUIRED"
+				rollback-for="java.lang.Exception,java.lang.RuntimeException" />
+		</tx:attributes>
+	</tx:advice>
+	
+	
+	<bean id="returnObjectAspect" class="org.app.aop.aspect.ReturnObjectAspect"></bean>
+	
+	<!-- spring事务处理的结束 -->
+
+<!-- redis连接池配置 开始-->
+	<bean id="jedisPoolConfig" class="redis.clients.jedis.JedisPoolConfig">
+        <property name="maxTotal" value="100" />
+        <property name="maxIdle" value="20" />
+        <property name="maxWaitMillis" value="500" />
+        <property name="testOnBorrow" value="true" />
+        <property name="testOnReturn" value="true" />
+    </bean>    
+	 <bean id="jedisPool" class="redis.clients.jedis.JedisPool"  scope="singleton">
+	        <constructor-arg index="0" ref="jedisPoolConfig" />
+	        <constructor-arg index="1"  value="101.200.89.206"/>
+	        <constructor-arg index="2"  value="6379" type="int"/>
+	        <constructor-arg index="3"  value="3000" type="int"/>
+	        <constructor-arg index="4"  value="!qAz2wsx,./"/>
+	        
+	    </bean>
+<!-- redis连接池配置结束 -->
+	<!-- 存放日志的数据库链接
+	<bean id="logSessionFactory"
+		class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+		<property name="configLocation" value="classpath:hibernate_log.cfg.xml">
+		</property>
+	</bean>-->
+
+	<bean id="txCommonDao" class="source.frame.dao.base.impl.TransactionCommonDao">
+		<property name="sessionFactory" ref="sessionFactory"></property>
+	</bean>
+	<bean id="immediaCommonDao" class="source.frame.dao.base.impl.ImmediaCommonDao">
+		<property name="sessionFactory" ref="sessionFactory"></property>
+	</bean>
+
+	<!-- 用户注册 <bean id="userRegisterDao" class="com.doper.card.dao.UserRegisterDao"> 
+		<property name="veDao" ref="veDao"></property> </bean> -->
+	<!-- 引入其它的controll控制配置文件 -->
+
+	<!--<import resource="classpath:source/config/xml/spring/spring-weixinToken.xml" />  -->
+</beans>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd">
+	<!-- <bean id="helloControl" class="org.chengbin.struts2.SpringAction"></bean> -->
+
+    <!-- 用户消费相关 -->
+	<bean id="userConsumService" class="com.doper.card.service.userConsumption.impl.UserConsumptionImpl"></bean>
+	<!-- 用户消费订单生产-->
+	<bean id="userConsumOrderService" class="com.doper.card.service.userConsumption.impl.UserConsumOrderServiceImpl"></bean>
+	<!-- 用户消费订单提交 -->
+	<bean id="userConsumOrderSubmitService" class="com.doper.card.service.userConsumption.impl.UserConsumOrderSubmitServiceImpl"></bean>
+	<!-- 订单扣款业务工厂 -->
+	<bean id="userConsumOrderChargeServiceFactory" class="com.doper.card.service.userConsumption.UserConsumOrderChargeServiceFactory"></bean>
+	
+	<!-- 订单扣款处理策略业务 -->
+	<bean id="userConsumOrderBondChargeService" class="com.doper.card.service.userConsumption.impl.charge.UserConsumOrderBondChargeService"></bean>
+	<bean id="userConsumOrderGoldOptBusiChargeService" class="com.doper.card.service.userConsumption.impl.charge.UserConsumOrderGoldOptBusiChargeService"></bean>
+	<bean id="userConsumOrderGoldRechargeService" class="com.doper.card.service.userConsumption.impl.charge.UserConsumOrderGoldRechargeService"></bean>
+	<bean id="userConsumOrderGoldTransBusiChargeService" class="com.doper.card.service.userConsumption.impl.charge.UserConsumOrderGoldTransBusiChargeService"></bean>
+	<bean id="userConsumOrderIngotChargeService" class="com.doper.card.service.userConsumption.impl.charge.UserConsumOrderIngotChargeService"></bean>
+	<!-- 订单提交后的赠送业务 -->
+	<bean id="userConsumOrderPresentServiceFactory" class="com.doper.card.service.userConsumption.UserConsumOrderPresentServiceFactory"></bean>
+	<bean id="userconsumOrderPresentIngotService" class="com.doper.card.service.userConsumption.impl.present.UserConsumOrderPresentIngotServicImpl"></bean>
+	<bean id="userconsumOrderPresentCreditsService" class="com.doper.card.service.userConsumption.impl.present.UserConsumOrderPresentCreditisServiceImpl"></bean>
+</beans> 

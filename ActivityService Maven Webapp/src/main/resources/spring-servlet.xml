@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc" xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="  
+        http://www.springframework.org/schema/beans   
+        http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+        http://www.springframework.org/schema/context   
+        http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+        http://www.springframework.org/schema/aop 
+        http://www.springframework.org/schema/aop/spring-aop-4.0.xsd
+        http://www.springframework.org/schema/mvc      
+        http://www.springframework.org/schema/mvc/spring-mvc-4.0.xsd">
+	<!-- 拦截器的定义 -->
+	<mvc:interceptors>
+		<bean class="org.quickcode.frame.Interceptor.AuthInterceptor" />
+	</mvc:interceptors>
+
+	<!-- 自动扫描Controller的包路径 -->
+	<context:component-scan base-package="com.newCloud.activity.controller" />
+	<!-- 启用注解方式 -->
+	<mvc:annotation-driven>
+	   <mvc:message-converters>
+	        <bean class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter">
+            <property name="objectMapper">
+                <bean class="com.fasterxml.jackson.databind.ObjectMapper">
+                    <property name="dateFormat">
+                        <bean class="java.text.SimpleDateFormat">
+                            <constructor-arg type="java.lang.String" value="yyyy-MM-dd"/>
+                        </bean>
+                    </property>
+                </bean>
+            </property>
+        </bean>
+	   </mvc:message-converters>
+	
+	</mvc:annotation-driven>  <!-- 支持spring3.0新的注解方式 -->
+
+	<bean id="simpleUrlHandlerMapping"
+		class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+		<property name="mappings">
+			<props>
+			</props>
+		</property>
+	</bean>
+	<!-- 使用默认的jsp显示模板 -->
+	<!-- <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver" 
+		p:prefix="/WEB-INF/jsp/" p:suffix=".jsp" /> -->
+
+	<!-- 配置模板解析技术 -->
+	<bean id="velocityConfigurer"
+		class="org.springframework.web.servlet.view.velocity.VelocityConfigurer">
+		<property name="resourceLoaderPath">
+			<value>WEB-INF/velocity/</value>
+		</property>
+	</bean>
+
+
+	<bean id="viewResolver"
+		class="org.springframework.web.servlet.view.velocity.VelocityViewResolver">
+		<property name="suffix">
+			<value>.dataHtml</value>
+		</property>
+	</bean>
+
+	<!-- 对返回值进行封装 -->
+	<aop:config proxy-target-class="true">
+		<aop:aspect id="returnAspectAop" ref="returnObjectAspect">
+			<aop:pointcut expression="execution(* com.newCloud.activity.controller..*.*(..))"
+				id="crtlCut" />
+			<aop:around method="doBasicProfiing" pointcut-ref="crtlCut" />
+			<aop:after-throwing method="doAfterThrowing" pointcut-ref="crtlCut" throwing="e" />
+		</aop:aspect>
+	</aop:config>
+
+	<!-- 配置模板解析技术 -->
+
+	<bean
+		class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter">
+		<property name="messageConverters">
+			<list>
+				<bean
+					class="org.springframework.http.converter.StringHttpMessageConverter">
+					<property name="supportedMediaTypes">
+						<list>
+							<value>text/html;charset=UTF-8</value>
+						</list>
+					</property>
+				</bean>
+			</list>
+		</property>
+	</bean>
+
+	<!-- 支持多图片上传 -->
+
+	<bean id="multipartResolver"
+		class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+		<property name="defaultEncoding" value="utf-8"></property>
+		<property name="maxUploadSize" value="10485760000"></property>
+		<property name="maxInMemorySize" value="40960"></property>
+	</bean>
+
+
+
+
+
+
+</beans>
